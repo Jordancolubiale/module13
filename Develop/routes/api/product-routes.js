@@ -5,18 +5,60 @@ const { Product, Category, Tag, ProductTag } = require('../../models');
 
 // get all products
 router.get('/', (req, res) => {
+  Product.findAll({
+    include: [Category, {
+      model: Tag,
+      through: ProductTag
+    }]
+      })
+      .then(products => res.json(products))
+      .catch(err => res.status(500).json(err))
   // find all products
   // be sure to include its associated Category and Tag data
 });
 
 // get one product
 router.get('/:id', (req, res) => {
+  Product.findOne({
+    where: {
+      id: req.params.id
+    },
+    include: [Category, {
+      model: Tag,
+      through: ProductTag
+    }]
+      })
+      .then(product => {
+        if (!product) {
+          res.status(404).json({
+            message: "No existing product with this id!"
+          })
+        }
+        res.json(product)
+      })
+      .catch(err => res.status(500).json(err))
   // find a single product by its `id`
   // be sure to include its associated Category and Tag data
 });
 
 // create new product
 router.post('/', (req, res) => {
+  Product.create(req.body)
+      .then(product => {
+        if(req.body.tagIds && req.body.tagIds.length){
+          const productTagIdArr = req.body.tagIds.map((tag_id)=> {
+            return {
+            product_id: product.id,
+            tag_id
+            }
+          })
+          return ProductTag.bulkCreate(productTagIdArr)
+        }
+
+        res.json(product)
+      })
+      .then(productTagIds => res.status(200).json(productTagIds)) 
+      .catch(err => res.status(400).json(err))
   /* req.body should look like this...
     {
       product_name: "Basketball",
